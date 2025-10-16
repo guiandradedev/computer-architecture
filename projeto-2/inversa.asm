@@ -1,6 +1,8 @@
 .data
     msg: .asciiz "Digite o valor de N (tamanho da matriz NxN): \n"
-    msg_num: .asciiz "Digite um numero para a matriz: \n"
+    msg_num: .asciiz "Digite um numero para a matriz A["
+    msg_num2: .asciiz "]["
+    msg_num3: .asciiz "]: "
     N_invalido_msg: .asciiz "Erro: N deve ser maior que 0 \n"
     gauss_valido_msg: .asciiz "Matriz inversa calculada: \n"
     gauss_invalido_msg: .asciiz "Erro: Não e possivel calcular a matriz inversa dessa matriz. \n"
@@ -117,7 +119,6 @@ read_matrix:
     or $t0, $zero, $zero      # Zera o contador (int i=0)
     or $t1, $zero, $zero      # Zera o contador (int j=0)
 
-    li.s $f0, 1.0        # Carrega o valor 0.0 em $f0 (valor teste)
     li.s $f1, 1.0         # Carrega o valor 1.0 no registrador de ponto flutuante $f1
 
     for_i_read:
@@ -136,11 +137,34 @@ read_matrix:
             sll $t2, $t2, 2   # ((i * N) + j) * 4
 
             add $t2, $t2, $a1 # $t2 += end. inicial da matriz
-
             # Aqui ja tenho o endereço de memória que vou inserir o elemento
+
+            # Exibição da mensagem de leitura
+            li $v0, 4
+            la $a0, msg_num # "Digite um numero para a matriz A["
+            syscall
+
+            li $v0, 1
+            move $a0, $t0 # i
+            syscall
+
+            li $v0, 4
+            la $a0, msg_num2 # "]["
+            syscall
+
+            li $v0, 1
+            move $a0, $t1 # j
+            syscall
+
+            li $v0, 4
+            la $a0, msg_num3 # "]: "
+            syscall
+
+            li $v0, 6 # Le o digito
+            syscall
+
             swc1 $f0, 0($t2)   # Insiro $t4 (valor teste) na memória
 
-            add.s $f0, $f0, $f1
             addi $t1, $t1, 1       # j++
             
             j for_j_read
@@ -371,13 +395,6 @@ gauss_jordan:
         add $t3, $t3, $a1                                       # $t3 += end. inicial da matriz
 
         lwc1 $f1, 0($t3)                                        # Carrega na memória M[i][i]
-
-        lwc1 $f12, 0($t3)
-        li   $v0, 2            # syscall print_int
-        syscall
-        li   $v0, 11
-        li   $a0, 32
-        syscall
 
         c.eq.s $f0, $f1                                         # Compara se $f0 (zero) != $f1 (M[i][i])
         bc1f valid_matrix
