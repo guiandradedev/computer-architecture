@@ -17,11 +17,14 @@ int gauss_jordan(double A[N][N], double I[N][N]) {
 
     for (i = 0; i < N; i++) {
         temp = A[i][i];
+
+        // Verifica se é válido
         if (temp == 0) {
             printf("Erro: Não é possível inverter a matriz.\n");
             return 0;
         }
 
+        // Normaliza as matrizes
         for (j = 0; j < N; j++) {
             A[i][j] /= temp;
             I[i][j] /= temp;
