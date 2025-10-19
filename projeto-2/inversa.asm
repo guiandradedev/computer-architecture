@@ -398,11 +398,51 @@ gauss_jordan:
 
         c.eq.s $f0, $f1                                         # Compara se $f0 (zero) != $f1 (M[i][i])
         bc1f valid_matrix
+        
+        # Nesse ponto, $f0 == $f1, ou seja, M[i][i] == 0
+        or $t1, $zero, $zero                                    # Zera o contador j
+        or $t4, $zero, $zero                                    # Flag found para swap
+        for_j_swap_search:
+            slt $t5, $t1, $s0                                   # $t5 = $t1 < $s0, ou seja $t5 = j < N
+            beq $t5, $zero, end_for_j_swap_search               # Se j >= N finaliza o loop
+            bne $t4, $zero, end_for_j_swap_search               # Se já encontrou uma linha válida de swap, finaliza o loop
 
-        # $f0 == $f1, finaliza a função retornando zero, ou seja, matriz inválida
-        or $v0, $zero, $zero
-        jr $ra
+            # Calcula o endereço M[j][i]
+            mul $t5, $t1, $s0                                   # $t5 = (j * N)
+            add $t5, $t5, $t0                                   # $t5 += $t0 => $t5 = (j*N) + i
+            sll $t5, $t5, 2                                     # $t5 = ((j * N) + i) * 4 => calcula o offset [j][i]
+            add $t5, $t5, $a1                                   # $t5 += end. inicial da matriz
 
+            lwc1 $f2, 0($t5)                                    # $f2 = M[j][i]   
+
+            c.eq.s $f0, $f2                                     # Compara se M[j][i] != 0
+            bc1f continue_swap_search
+
+            # Achou uma linha para swap
+            # Função swap requer:
+            # $a0 = N - manteve
+            # $a1 = Matriz - manteve
+            # $a2 = Identidade - manteve
+            # $a3 = linha i - $t0
+            # $t0 = linha j - $t1
+            move $a3, $t0                                       # Seta a linha i em $a3
+            move $t0, $t1                                       # Seta a linha j em $t0
+            jal swap_rows
+            move $t0, $a3                                       # Restaura o valor de i em $t0
+
+            ori $t4, $zero, 1                                    # Seta a flag found para 1
+
+            continue_swap_search:
+            addi $t1, $t1, 1                                    # Incrementa j++
+            j for_j_swap_search                                 # Retorna para a próxima iteração do loop
+
+        end_for_j_swap_search:
+
+        # Após o loop de busca por swap, verifica se encontrou uma linha válida
+        bne $t4, $zero, valid_matrix                            # Se encontrou ($t4 != 0), matriz válida
+
+        or $v0, $zero, $zero                                    # Define retorno como 0 (matriz inválida)
+        j end_gauss
 
         #------------- Normalização da matriz com base no pivô (diagonal principal)
         valid_matrix:
@@ -501,6 +541,7 @@ gauss_jordan:
         j for_i_gauss_jordan
 
     end_for_i_gauss_jordan_matrix:
+    end_gauss:
 
     ori $v0, $zero, 1
     lw $s0, 56($sp)
@@ -521,4 +562,89 @@ gauss_jordan:
     lwc1 $f1, 4($sp)
     lwc1 $f2, 0($sp)
     addi $sp, $sp, 60
+    jr $ra
+# ------------------- SWAP 
+swap_rows:
+    # Parâmetros:
+    # $a0 = N
+    # $a1 = Matriz
+    # $a2 = Identidade
+    # $a3 = linha i
+    # $t0 = linha j
+    addi $sp, $sp, -64
+    sw $ra, 60($sp)
+    sw $a0, 56($sp)
+    sw $a1, 52($sp)
+    sw $a2, 48($sp)
+    sw $a3, 44($sp)
+    sw $t0, 40($sp)
+    sw $t1, 36($sp)
+    sw $t2, 32($sp)
+    sw $t3, 28($sp)
+    sw $t4, 24($sp)
+    sw $t5, 20($sp)
+    sw $t6, 16($sp)
+    sw $t7, 12($sp)
+    sw $t8, 8($sp)
+    swc1 $f0, 4($sp)
+    swc1 $f1, 0($sp)
+
+    or $t1, $zero, $zero                                    # Zera o contador k=0
+
+    # Calculo do endereço [i]
+    mul $t3, $a3, $a0                                       # $t3 = (i * N)
+
+    # Calculo do endereço [j]
+    mul $t4, $t0, $a0                                       # $t4 = (j * N)
+
+    for_k_swap_rows:
+        slt $t2, $t1, $a0                                   # $t2 = $t1 < $a0, ou seja $t1 = k < N
+        beq $t2, $zero, end_for_k_swap_rows                 # Se k >= N finaliza o loop
+
+        # Swap na matriz M
+        add $t5, $t2, $t1                                   # $t5 = $t2 + $t1 => $t5 = (i*N) + k
+        sll $t5, $t5, 2                                     # $t5 = ((i * N) + k) * 4 calcula o offset [i][k]
+        add $t6, $t5, $a1                                   # $t6 = $t3 + end. inicial da matriz => M[i][k]
+        lwc1 $f0, 0($t6)                                    # Carrega M[i][k] em $f0
+
+        add $t7, $t2, $t1                                   # $t7 = $t2 + $t1 => $t7 = (i*N) + k
+        sll $t7, $t7, 2                                     # $t7 = ((i * N) + k) * 4 calcula o offset [i][k]
+        add $t8, $t7, $a1                                   # $t8 = $t7 + end. inicial da matriz => M[j][k]
+        lwc1 $f1, 0($t8)                                    # Carrega M[j][k] em $f1
+
+        swc1 $f1, 0($t6)                                    # Coloca em M[i][k] o valor de M[j][k]
+        swc1 $f0, 0($t8)                                    # Coloca em M[j][k] o valor de M[i][k]
+
+        # Swap na matriz identidade
+        add $t6, $t5, $a2                                   # $t6 = $t3 + end. inicial da matriz identidade => I[i][k]
+        lwc1 $f0, 0($t6)                                    # Carrega I[i][k] em $f0
+
+        add $t8, $t7, $a2                                   # $t8 = $t7 + end. inicial da matriz => I[j][k]
+        lwc1 $f1, 0($t8)                                    # Carrega I[j][k] em $f1
+
+        swc1 $f1, 0($t6)                                    # Coloca em I[i][k] o valor de I[j][k]
+        swc1 $f0, 0($t8)                                    # Coloca em I[j][k] o valor de I[i][k]
+
+        
+        addi $t1, $t1, 1                                    # Incrementa k++
+        j for_k_swap_rows                                   # Retorna para a próxima iteração do loop
+    end_for_k_swap_rows:
+
+    sw $ra, 60($sp)
+    sw $a0, 56($sp)
+    sw $a1, 52($sp)
+    sw $a2, 48($sp)
+    sw $a3, 44($sp)
+    sw $t0, 40($sp)
+    sw $t1, 36($sp)
+    sw $t2, 32($sp)
+    sw $t3, 28($sp)
+    sw $t4, 24($sp)
+    sw $t5, 20($sp)
+    sw $t6, 16($sp)
+    sw $t7, 12($sp)
+    sw $t8, 8($sp)
+    swc1 $f0, 4($sp)
+    swc1 $f1, 0($sp)
+    addi $sp, $sp, 64
     jr $ra

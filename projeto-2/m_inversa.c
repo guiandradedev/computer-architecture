@@ -1,16 +1,16 @@
 #include <stdio.h>
 
-#define N 4
+#define N 3
 
-void swapRows(double A[N][N], double I[N][N], int row1, int row2) {
-    for (int i = 0; i < N; i++) {
-        double temp = A[row1][i];
-        A[row1][i] = A[row2][i];
-        A[row2][i] = temp;
+void swapRows(double A[N][N], double I[N][N], int i, int j) {
+    for (int k = 0; k < N; k++) {
+        double temp = A[i][k];
+        A[i][k] = A[j][k];
+        A[j][k] = temp;
 
-        temp = I[row1][i];
-        I[row1][i] = I[row2][i];
-        I[row2][i] = temp;
+        temp = I[i][k];
+        I[i][k] = I[j][k];
+        I[j][k] = temp;
     }
 }
 
@@ -35,11 +35,10 @@ int gauss_jordan(double A[N][N], double I[N][N]) {
         // Verifica se é válido
         if (temp == 0) {
             int found = 0;
-            for (int j = i + 1; j < N; j++) {
+            for (int j = i + 1; j < N && !found; j++) {
                 if (A[j][i] != 0) {
                     swapRows(A, I, i, j);
                     found = 1;
-                    break;
                 }
             }
             if (!found) {
@@ -78,10 +77,9 @@ int main() {
     //     {5, 3, -1, 2, 0, 6}
     // };
     double A[N][N] = {
-        {4, 7, 2, 3},
-        {3, 5, 1, 2},
-        {2, 6, 3, 1},
-        {1, 2, 4, 7}
+        {1,2,3},
+        {4,5,6},
+        {7,8,9}
     };
 
     double I[N][N];
