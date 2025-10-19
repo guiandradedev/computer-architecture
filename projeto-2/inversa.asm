@@ -427,7 +427,7 @@ gauss_jordan:
             # $t0 = linha j - $t1
             move $a3, $t0                                       # Seta a linha i em $a3
             move $t0, $t1                                       # Seta a linha j em $t0
-            jal swap_rows
+            #jal swap_rows
             move $t0, $a3                                       # Restaura o valor de i em $t0
 
             ori $t4, $zero, 1                                    # Seta a flag found para 1
@@ -541,9 +541,10 @@ gauss_jordan:
         j for_i_gauss_jordan
 
     end_for_i_gauss_jordan_matrix:
-    end_gauss:
 
     ori $v0, $zero, 1
+
+    end_gauss:
     lw $s0, 56($sp)
     lw $a0, 52($sp)
     lw $a1, 48($sp)
