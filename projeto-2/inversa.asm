@@ -15,223 +15,226 @@
 
 main:
     # Solicita o valor de N
-    li $v0, 4                 # Chamada para print string
-    la $a0, msg               # Carrega o endereço da string msg
+    li $v0, 4                                                   # Chamada para print string
+    la $a0, msg                                                 # Carrega o endereço da string msg
     syscall
 
     # Lê o valor de N
-    li $v0, 5                 # Chamada para ler inteiro
+    li $v0, 5                                                   # syscall para ler valores inteiros
     syscall
-    move $t0, $v0             # Armazena o valor de N em $t0
+    move $t0, $v0                                               # Armazena o valor de N em $t0
 
-    # Verifica se 0 >= N 
+    
     slt $t1, $zero, $t0
-    beq $t1, $zero, N_invalido
+    beq $t1, $zero, N_invalido                                  # Se N <= 0, pula para mensagem de erro 
 
-    mul $a0, $t0, $t0         # $a0 = N * N
-    sll $a0, $a0, 2           # $a0 *= 4
+    # Cálculo do tamanho da matriz (N*N*4 bytes)
+    mul $a0, $t0, $t0                                           # $a0 = N * N
+    sll $a0, $a0, 2                                             # $a0 *= 4
 
     # Alocação da matriz
-    li $v0, 9                 # syscall para alocação dinâmica da matriz
+    li $v0, 9                                                   # syscall para alocação dinâmica da matriz
     syscall
-    move $s0, $v0             # $s0 = endereço inicial alocado
+    move $s0, $v0                                               # $s0 = endereço inicial alocado
 
     # Alocação da matriz identidade
-    li $v0, 9                 # syscall para alocação da matriz identidade
+    li $v0, 9                                                   # syscall para alocação da matriz identidade
     syscall
-    move $s1, $v0             # $s1 = endereço da matriz identidade alocada
+    move $s1, $v0                                               # $s1 = endereço da matriz identidade alocada
 
     move $a0, $t0
     move $a1, $s0
-    jal read_matrix            # Executa a funcão de printa matriz
-    jal print_matrix
+    jal read_matrix                                             # Le a matriz do usuário
+    jal print_matrix                                            # Exibe a matriz lida  
 
-    li $v0, 4
+    li $v0, 4                                                   # syscall para pular linha
     la $a0, newline
     syscall
     
-    move $a0, $t0
+    move $a0, $t0                                              
     move $a1, $s1
-    jal create_identity
-    jal print_matrix
+    jal create_identity                                         # Cria a matriz identidade
+    jal print_matrix                                            # Exibe a matriz identidade criada
 
-    li $v0, 4
+    li $v0, 4                                                   # syscall para pular linha 
     la $a0, newline
     syscall
 
     move $a0, $t0
     move $a1, $s0
     move $a2, $s1
-    jal gauss_jordan
+    jal gauss_jordan                                            # Executa a função de calculo da matriz inversa
 
-    bne $v0, $zero, gauss_valido
+    bne $v0, $zero, gauss_valido                                # Se o retorno da função 1, existe matriz inversa a ser exibida válida 
+
     li $v0, 4
-    la $a0, gauss_invalido_msg
+    la $a0, gauss_invalido_msg                                  # Exibe a mensagem de matriz não inversivel
     syscall
-    j end_prog
+
+    j end_prog                                                  # Finaliza o programa
 
     gauss_valido:
     li $v0, 4
-    la $a0, gauss_valido_msg
+    la $a0, gauss_valido_msg                                    # Exibe a mensagem de matriz inversivel
     syscall
 
     li $v0, 4
-    la $a0, newline
+    la $a0, newline                                             # Pula uma linha   
     syscall
 
     move $a0, $t0
     move $a1, $s1
-    jal print_matrix
+    jal print_matrix                                            # Printa a matriz inversa calculada  
 
     li $v0, 4
-    la $a0, newline
+    la $a0, newline                                             # Pula uma linha    
     syscall
 
     li $v0, 4
-    la $a0, original_matrix_msg
+    la $a0, original_matrix_msg                                 # Exibe a mensagem de matriz original preenchida (nova inversa)    
     syscall
 
     move $a0, $t0
     move $a1, $s0
-    jal print_matrix
+    jal print_matrix                                            # Printa a matriz original preenchida (nova inversa)
 
     end_prog:
-    li   $v0,10                # Encerra o programa
+    li   $v0,10                                                 # Encerra o programa
     syscall
 
 N_invalido:
-    li $v0, 4                 # Chamada para print string
-    la $a0, N_invalido_msg    # Carrega o endereço da string msg
+    li $v0, 4                                                   # Chamada para print string
+    la $a0, N_invalido_msg                                      # Carrega o endereço da string msg
     syscall
     
-    j end_prog                # Finaliza o programa caso N <= 0
+j end_prog                                                      # Finaliza o programa caso N <= 0
 
 #----------------------------------------- Leitura de matriz
 read_matrix:
-    addi $sp, $sp, -28        # Separa na pilha a quantidade de elementos que vai inserir
-    sw $ra, 24($sp)           # Endereço de retorno da função
-    sw $a1, 20($sp)           # Endereço inicial da matriz
-    sw $a0, 16($sp)           # Valor de N original
-    sw $s0, 12($sp)           # Variável temporária para armazenar N
+    addi $sp, $sp, -28                                          # Separa na pilha a quantidade de elementos que vai inserir
+    sw $ra, 24($sp)                                             # Endereço de retorno da função
+    sw $a1, 20($sp)                                             # Endereço inicial da matriz
+    sw $a0, 16($sp)                                             # Valor de N original
+    sw $s0, 12($sp)                                             # Variável temporária para armazenar N
 
     # Registradores temporários utilizados na função
     sw $t0, 8($sp)
     sw $t1, 4($sp)
     sw $t2, 0($sp)
 
-    move $s0, $a0             # $s0 = N
+    move $s0, $a0                                               # $s0 = N
 
-    or $t0, $zero, $zero      # Zera o contador (int i=0)
-    or $t1, $zero, $zero      # Zera o contador (int j=0)
+    or $t0, $zero, $zero                                        # Zera o contador (int i=0)
+    or $t1, $zero, $zero                                        # Zera o contador (int j=0)
 
-    li.s $f1, 1.0         # Carrega o valor 1.0 no registrador de ponto flutuante $f1
+    li.s $f1, 1.0                                               # Carrega o valor 1.0 no registrador de ponto flutuante $f1
 
     for_i_read:
-        slt $t2, $t0, $s0      # $t2 = $t0 < $s0 => $t2 = i < N
-        beq $t2, $zero, end_for_i_read_matrix # Se i >= N sai do loop
+        slt $t2, $t0, $s0                                       # $t2 = $t0 < $s0 => $t2 = i < N
+        beq $t2, $zero, end_for_i_read_matrix                   # Se i >= N sai do loop
 
-        or $t1, $zero, $zero  # Zera o contador de j para a nova iteração
+        or $t1, $zero, $zero                                    # Zera o contador de j para a nova iteração
 
         # Acesso a matriz via (end. inicial + ((i * N) + j) * 4)
         for_j_read:
-            slt $t2, $t1, $s0     # $t2 = $t1 < $s0 => $t2 = j < N
+            slt $t2, $t1, $s0                                   # $t2 = $t1 < $s0 => $t2 = j < N
             beq $t2, $zero, end_for_j_read_matrix
 
-            mul $t2, $t0, $s0 # $t2 = i * N
-            add $t2, $t2, $t1 # $t2 += $t1 => $t2 (aka i*N) += j
-            sll $t2, $t2, 2   # ((i * N) + j) * 4
+            mul $t2, $t0, $s0                                   # $t2 = i * N
+            add $t2, $t2, $t1                                   # $t2 += $t1 => $t2 (aka i*N) += j
+            sll $t2, $t2, 2                                     # ((i * N) + j) * 4
 
-            add $t2, $t2, $a1 # $t2 += end. inicial da matriz
+            add $t2, $t2, $a1                                   # $t2 += end. inicial da matriz
             # Aqui ja tenho o endereço de memória que vou inserir o elemento
 
             # Exibição da mensagem de leitura
             li $v0, 4
-            la $a0, msg_num # "Digite um numero para a matriz A["
+            la $a0, msg_num                                     # "Digite um numero para a matriz A["
             syscall
 
             li $v0, 1
-            move $a0, $t0 # i
+            move $a0, $t0                                       # i
             syscall
 
             li $v0, 4
-            la $a0, msg_num2 # "]["
+            la $a0, msg_num2                                    # "]["
             syscall
 
             li $v0, 1
-            move $a0, $t1 # j
+            move $a0, $t1                                       # j
             syscall
 
             li $v0, 4
-            la $a0, msg_num3 # "]: "
+            la $a0, msg_num3                                    # "]: "
             syscall
 
-            li $v0, 6 # Le o digito
+            li $v0, 6                                           # Le o digito
             syscall
 
-            swc1 $f0, 0($t2)   # Insiro $t4 (valor teste) na memória
+            swc1 $f0, 0($t2)                                    # Insiro $t4 (valor teste) na memória
 
-            addi $t1, $t1, 1       # j++
+            addi $t1, $t1, 1                                    # j++
             
             j for_j_read
 
         end_for_j_read_matrix:
         
         # Incrementar i
-        addi $t0, $t0, 1         # i++
+        addi $t0, $t0, 1                                        # i++
 
-        j for_i_read                  # Volta para o for de i
+        j for_i_read                                            # Volta para o for de i
 
     end_for_i_read_matrix:
-    lw $ra, 24($sp)           # Endereço de retorno da função
-    lw $a1, 20($sp)           # Endereço inicial da matriz
-    lw $a0, 16($sp)           # Valor de N original
-    lw $s0, 12($sp)           # Variável temporária para armazenar N
+    lw $ra, 24($sp)                                             # Endereço de retorno da função
+    lw $a1, 20($sp)                                             # Endereço inicial da matriz
+    lw $a0, 16($sp)                                             # Valor de N original
+    lw $s0, 12($sp)                                             # Variável temporária para armazenar N
 
     # Registradores temporários utilizados na função
     lw $t0, 8($sp)
     lw $t1, 4($sp)
     lw $t2, 0($sp)
-    addi $sp, $sp, 24         # Desaloca o espaço na pilha
-    jr $ra                   # Retorna para o chamador
+    addi $sp, $sp, 24                                           # Desaloca o espaço na pilha
+    jr $ra                                                      # Retorna para o chamador
     
 #----------------------------------------------- Printa matriz
 print_matrix:
-    addi $sp, $sp, -28        # Separa na pilha a quantidade de elementos que vai inserir
-    sw $ra, 24($sp)           # Endereço de retorno da função
-    sw $a1, 20($sp)           # Endereço inicial da matriz
-    sw $a0, 16($sp)           # Valor de N original
-    sw $s0, 12($sp)           # Variável temporária para armazenar N
+    addi $sp, $sp, -28                                          # Separa na pilha a quantidade de elementos que vai inserir
+    sw $ra, 24($sp)                                             # Endereço de retorno da função
+    sw $a1, 20($sp)                                             # Endereço inicial da matriz
+    sw $a0, 16($sp)                                             # Valor de N original
+    sw $s0, 12($sp)                                             # Variável temporária para armazenar N
 
     # Registradores temporários utilizados na função
     sw $t0, 8($sp)
     sw $t1, 4($sp)
     sw $t2, 0($sp)
 
-    move $s0, $a0             # $s0 = N
+    move $s0, $a0                                               # $s0 = N
 
-    or $t0, $zero, $zero      # Zera o contador (int i=0)
-    or $t1, $zero, $zero      # Zera o contador (int j=0)
+    or $t0, $zero, $zero                                        # Zera o contador (int i=0)
+    or $t1, $zero, $zero                                        # Zera o contador (int j=0)
 
     for_i_print:
-        slt $t2, $t0, $s0      # $t2 = $t0 < $s0 => $t2 = i < N
-        beq $t2, $zero, end_for_i_print_matrix # Se i >= N sai do loop
+        slt $t2, $t0, $s0                                       # $t2 = $t0 < $s0 => $t2 = i < N
+        beq $t2, $zero, end_for_i_print_matrix                  # Se i >= N sai do loop
 
-        or $t1, $zero, $zero  # Zera o contador de j para a nova iteração
+        or $t1, $zero, $zero                                    # Zera o contador de j para a nova iteração
 
         # Acesso a matriz via (end. inicial + ((i * N) + j) * 4)
         for_j_print:
-            slt $t2, $t1, $s0     # $t2 = $t1 < $s0 => $t2 = j < N
+            slt $t2, $t1, $s0                                   # $t2 = $t1 < $s0 => $t2 = j < N
             beq $t2, $zero, end_for_j_print_matrix
 
-            mul $t2, $t0, $s0 # $t2 = i * N
-            add $t2, $t2, $t1 # $t2 += $t1 => $t2 (aka i*N) += j
-            sll $t2, $t2, 2   # ((i * N) + j) * 4
+            mul $t2, $t0, $s0                                   # $t2 = i * N
+            add $t2, $t2, $t1                                   # $t2 += $t1 => $t2 (aka i*N) += j
+            sll $t2, $t2, 2                                     # ((i * N) + j) * 4
 
-            add $t2, $t2, $a1 # $t2 += end. inicial da matriz
+            add $t2, $t2, $a1                                   # $t2 += end. inicial da matriz
 
             # Aqui ja tenho o endereço de memória que vou ler
-            lwc1 $f12, 0($t2)   # Insiro $t4 (valor teste) na memória
-            li   $v0, 2            # syscall print_int
+            lwc1 $f12, 0($t2)                                   # Insiro $t4 (valor teste) na memória
+            li   $v0, 2                                         # syscall print_int
             syscall
 
             # imprime espaço
