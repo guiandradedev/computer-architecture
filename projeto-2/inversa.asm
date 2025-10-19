@@ -8,7 +8,7 @@
     gauss_valido_msg: .asciiz "Matriz inversa calculada: \n"
     gauss_invalido_msg: .asciiz "Erro: Não e possivel calcular a matriz inversa dessa matriz. \n"
     newline: .asciiz "\n"
-    matrix_prompt: .asciiz "Matriz preenchida: \n"
+    original_matrix_msg: .asciiz "Matriz preenchida (nova identidade): \n"
     
 .text
     .globl main
@@ -80,15 +80,19 @@ main:
     syscall
 
     move $a0, $t0
-    move $a1, $s0
+    move $a1, $s1
     jal print_matrix
 
     li $v0, 4
     la $a0, newline
     syscall
 
+    li $v0, 4
+    la $a0, original_matrix_msg
+    syscall
+
     move $a0, $t0
-    move $a1, $s1
+    move $a1, $s0
     jal print_matrix
 
     end_prog:
@@ -246,59 +250,59 @@ print_matrix:
         syscall
         
         # Incrementar i
-        addi $t0, $t0, 1         # i++
+        addi $t0, $t0, 1                                        # i++
 
-        j for_i_print                  # Volta para o for de i
+        j for_i_print                                           # Volta para o for de i
 
     end_for_i_print_matrix:
-    lw $ra, 24($sp)           # Endereço de retorno da função
-    lw $a1, 20($sp)           # Endereço inicial da matriz
-    lw $a0, 16($sp)           # Valor de N original
-    lw $s0, 12($sp)           # Variável temporária para armazenar N
+    lw $ra, 24($sp)                                             # Endereço de retorno da função
+    lw $a1, 20($sp)                                             # Endereço inicial da matriz
+    lw $a0, 16($sp)                                             # Valor de N original
+    lw $s0, 12($sp)                                             # Variável temporária para armazenar N
 
     # Registradores temporários utilizados na função
     lw $t0, 8($sp)
     lw $t1, 4($sp)
     lw $t2, 0($sp)
-    addi $sp, $sp, 28         # Desaloca o espaço na pilha
-    jr $ra                   # Retorna para o chamador
+    addi $sp, $sp, 28                                           # Desaloca o espaço na pilha
+    jr $ra                                                      # Retorna para o chamador
 
 #-------------------------------------------------------- Criação da Matriz Identidade
 create_identity:
-    addi $sp, $sp, -28        # Separa na pilha a quantidade de elementos que vai inserir
-    sw $ra, 24($sp)           # Endereço de retorno da função
-    sw $a1, 20($sp)           # Endereço inicial da matriz
-    sw $a0, 16($sp)           # Valor de N original
-    sw $s0, 12($sp)           # Variável temporária para armazenar N
+    addi $sp, $sp, -28                                          # Separa na pilha a quantidade de elementos que vai inserir
+    sw $ra, 24($sp)                                             # Endereço de retorno da função
+    sw $a1, 20($sp)                                             # Endereço inicial da matriz
+    sw $a0, 16($sp)                                             # Valor de N original
+    sw $s0, 12($sp)                                             # Variável temporária para armazenar N
 
     # Registradores temporários utilizados na função
     sw $t0, 8($sp)
     sw $t1, 4($sp)
     sw $t2, 0($sp)
 
-    move $s0, $a0             # $s0 = N
+    move $s0, $a0                                               # $s0 = N
 
-    or $t0, $zero, $zero      # Zera o contador (int i=0)
-    or $t1, $zero, $zero      # Zera o contador (int j=0)
+    or $t0, $zero, $zero                                        # Zera o contador (int i=0)
+    or $t1, $zero, $zero                                        # Zera o contador (int j=0)
 
     for_i_create_identity:
-        slt $t2, $t0, $s0      # $t2 = $t0 < $s0 => $t2 = i < N
-        beq $t2, $zero, end_for_i_create_identity_matrix # Se i >= N sai do loop
+        slt $t2, $t0, $s0                                       # $t2 = $t0 < $s0 => $t2 = i < N
+        beq $t2, $zero, end_for_i_create_identity_matrix        # Se i >= N sai do loop
 
-        or $t1, $zero, $zero  # Zera o contador de j para a nova iteração
+        or $t1, $zero, $zero                                    # Zera o contador de j para a nova iteração
 
         # Acesso a matriz via (end. inicial + ((i * N) + j) * 4)
         for_j_create_identity:
-            slt $t2, $t1, $s0     # $t2 = $t1 < $s0 => $t2 = j < N
+            slt $t2, $t1, $s0                                   # $t2 = $t1 < $s0 => $t2 = j < N
             beq $t2, $zero, end_for_j_create_identity_matrix
 
-            mul $t2, $t0, $s0 # $t2 = i * N
-            add $t2, $t2, $t1 # $t2 += $t1 => $t2 (aka i*N) += j
-            sll $t2, $t2, 2   # ((i * N) + j) * 4
+            mul $t2, $t0, $s0                                   # $t2 = i * N
+            add $t2, $t2, $t1                                   # $t2 += $t1 => $t2 (aka i*N) += j
+            sll $t2, $t2, 2                                     # ((i * N) + j) * 4
 
-            add $t2, $t2, $a1 # $t2 += end. inicial da matriz
+            add $t2, $t2, $a1                                   # $t2 += end. inicial da matriz
 
-            beq $t0, $t1, identity_i_equals_j  # Se $t0 == $t1, vai para iguais
+            beq $t0, $t1, identity_i_equals_j                   # Se $t0 == $t1, vai para iguais
 
                 li.s $f12, 0.0
                 j identity_insert_memory
@@ -309,34 +313,39 @@ create_identity:
             identity_insert_memory:
 
             # Aqui ja tenho o endereço de memória que vou inserir o elemento
-            swc1 $f12, 0($t2)   # Insiro $t4 (valor teste) na memória
+            swc1 $f12, 0($t2)                                   # Insiro $t4 (valor teste) na memória
 
-            addi $t1, $t1, 1       # j++
+            addi $t1, $t1, 1                                    # Incrementa o contador j++
             
             j for_j_create_identity
 
         end_for_j_create_identity_matrix:
         
-        # Incrementar i
-        addi $t0, $t0, 1         # i++
+        addi $t0, $t0, 1                                        # Incrementa o contador i++
 
-        j for_i_create_identity                  # Volta para o for de i
+        j for_i_create_identity                                 # Volta para o for de i
 
     end_for_i_create_identity_matrix:
-    lw $ra, 24($sp)           # Endereço de retorno da função
-    lw $a1, 20($sp)           # Endereço inicial da matriz
-    lw $a0, 16($sp)           # Valor de N original
-    lw $s0, 12($sp)           # Variável temporária para armazenar N
+    lw $ra, 24($sp)                                             # Endereço de retorno da função
+    lw $a1, 20($sp)                                             # Endereço inicial da matriz
+    lw $a0, 16($sp)                                             # Valor de N original
+    lw $s0, 12($sp)                                             # Variável temporária para armazenar N
 
     # Registradores temporários utilizados na função
     lw $t0, 8($sp)
     lw $t1, 4($sp)
     lw $t2, 0($sp)
-    addi $sp, $sp, 28         # Desaloca o espaço na pilha
-    jr $ra                   # Retorna para o chamador
+    addi $sp, $sp, 28                                           # Desaloca o espaço na pilha
+    jr $ra                                                      # Retorna para o chamador
 
 #----------------------------------------- Gauss Jordan
 gauss_jordan:
+    # Parâmetros:
+    # $a0 = N
+    # $a1 = Matriz M
+    # $a2 = Matriz Identidade I
+
+    # Salva os registradores usados na pilha
     addi $sp, $sp, -64
     sw $ra, 60($sp)
     sw $s0, 56($sp)
@@ -357,32 +366,12 @@ gauss_jordan:
     swc1 $f1, 4($sp)
     swc1 $f2, 0($sp)
 
-    # Pilha
-    #$a0 = N
-    #$a1 = Matriz
-    #$a2 = Identidade
-
-    #$t0 = i
-    #$t1 = j
-    #$t2 = Endereço de i * N
-    #$t3 = livre
-    #$t4 = livre
-    #$t5
-    #$t6
-    #$t7
-    #$f0 = 0
-    #$f1
-    #$f2
-
     # Cria a identidade aqui!
-
 
     # Declarações iniciais
     move $s0, $a0                                               # $s0 = N
     or $t0, $zero, $zero                                        # Zera o contador (int i=0)
     li.s   $f0, 0.0                                             # Define que $f0 = 0.0
-
-    #ori $a0, $zero, 1                                    # Defino valor maximo no loop
 
     for_i_gauss_jordan:
         slt $t2, $t0, $a0                                       # Verifica se $t0 < $s0, ou seja, se i < N
@@ -404,7 +393,7 @@ gauss_jordan:
         bc1f valid_matrix
         
         # Nesse ponto, $f0 == $f1, ou seja, M[i][i] == 0
-        or $t1, $zero, $zero                                    # Zera o contador j
+        addi $t1, $t0, 1                                        # Inicia o contador j com j = i + 1
         or $t4, $zero, $zero                                    # Flag found para swap
         for_j_swap_search:
             slt $t5, $t1, $s0                                   # $t5 = $t1 < $s0, ou seja $t5 = j < N
@@ -434,16 +423,16 @@ gauss_jordan:
             jal swap_rows
             move $t0, $a3                                       # Restaura o valor de i em $t0
 
-            ori $t4, $zero, 1                                    # Seta a flag found para 1
+            ori $t4, $zero, 1                                   # Seta a flag found para 1
 
             # Calculo do endereço de M[i][i]
-            mul $t2, $t0, $s0                                       # $t2 = i * N, offset de acesso a matriz [i][x]
-            move $t3, $t2                                           # Coloca em $t3 o offset de [i] para evitar contas redundantes
-            add $t3, $t3, $t0                                       # $t3 += $t0, ou seja, $t3 (aka i*N) += i
-            sll $t3, $t3, 2                                         # $t3 = ((i * N) + i) * 4, endereço [i][j] sem o endereço base da matriz
-            add $t3, $t3, $a1                                       # $t3 += end. inicial da matriz
+            mul $t2, $t0, $s0                                   # $t2 = i * N, offset de acesso a matriz [i][x]
+            move $t3, $t2                                       # Coloca em $t3 o offset de [i] para evitar contas redundantes
+            add $t3, $t3, $t0                                   # $t3 += $t0, ou seja, $t3 (aka i*N) += i
+            sll $t3, $t3, 2                                     # $t3 = ((i * N) + i) * 4, endereço [i][j] sem o endereço base da matriz
+            add $t3, $t3, $a1                                   # $t3 += end. inicial da matriz
 
-            lwc1 $f1, 0($t3)                                        # Carrega na memória M[i][i]
+            lwc1 $f1, 0($t3)                                    # Carrega na memória M[i][i]
 
             continue_swap_search:
             addi $t1, $t1, 1                                    # Incrementa j++
@@ -605,52 +594,48 @@ swap_rows:
     sw $t7, 12($sp)
     sw $t8, 8($sp)
 
-    #li $v0, 4                 # Chamada para print string
-    #la $a0, msg               # Carrega o endereço da string msg
-    #syscall
-    
     swc1 $f0, 4($sp)
     swc1 $f1, 0($sp)
 
-    or $t1, $zero, $zero                                    # Zera o contador k=0
+    or $t1, $zero, $zero                                        # Zera o contador k=0
 
     # Calculo do endereço [i]
-    mul $t3, $a3, $a0                                       # $t3 = (i * N)
+    mul $t3, $a3, $a0                                           # $t3 = (i * N)
 
     # Calculo do endereço [j]
-    mul $t4, $t0, $a0                                       # $t4 = (j * N)
+    mul $t4, $t0, $a0                                           # $t4 = (j * N)
 
     for_k_swap_rows:
-        slt $t2, $t1, $a0                                   # $t2 = $t1 < $a0, ou seja $t1 = k < N
-        beq $t2, $zero, end_for_k_swap_rows                 # Se k >= N finaliza o loop
+        slt $t2, $t1, $a0                                       # $t2 = $t1 < $a0, ou seja $t1 = k < N
+        beq $t2, $zero, end_for_k_swap_rows                     # Se k >= N finaliza o loop
 
         # Swap na matriz M
-        add $t5, $t3, $t1                                   # $t5 = $t3 + $t1 => $t5 = (i*N) + k
-        sll $t5, $t5, 2                                     # $t5 = ((i * N) + k) * 4 calcula o offset [i][k]
-        add $t6, $t5, $a1                                   # $t6 = $t3 + end. inicial da matriz => M[i][k]
-        lwc1 $f0, 0($t6)                                    # Carrega M[i][k] em $f0, variavel temporaria
+        add $t5, $t3, $t1                                       # $t5 = $t3 + $t1 => $t5 = (i*N) + k
+        sll $t5, $t5, 2                                         # $t5 = ((i * N) + k) * 4 calcula o offset [i][k]
+        add $t6, $t5, $a1                                       # $t6 = $t3 + end. inicial da matriz => M[i][k]
+        lwc1 $f0, 0($t6)                                        # Carrega M[i][k] em $f0, variavel temporaria
 
-        add $t7, $t4, $t1                                   # $t7 = $t4 + $t1 => $t7 = (j*N) + k
-        sll $t7, $t7, 2                                     # $t7 = ((i * N) + k) * 4 calcula o offset [j][k]
-        add $t8, $t7, $a1                                   # $t8 = $t7 + end. inicial da matriz => M[j][k]
-        lwc1 $f1, 0($t8)                                    # Carrega M[j][k] em $f1
+        add $t7, $t4, $t1                                       # $t7 = $t4 + $t1 => $t7 = (j*N) + k
+        sll $t7, $t7, 2                                         # $t7 = ((i * N) + k) * 4 calcula o offset [j][k]
+        add $t8, $t7, $a1                                       # $t8 = $t7 + end. inicial da matriz => M[j][k]
+        lwc1 $f1, 0($t8)                                        # Carrega M[j][k] em $f1
 
-        swc1 $f1, 0($t6)                                    # Coloca em M[i][k] o valor de M[j][k]
-        swc1 $f0, 0($t8)                                    # Coloca em M[j][k] o valor de M[i][k]
+        swc1 $f1, 0($t6)                                        # Coloca em M[i][k] o valor de M[j][k]
+        swc1 $f0, 0($t8)                                        # Coloca em M[j][k] o valor de M[i][k]
 
         # Swap na matriz identidade
-        add $t6, $t5, $a2                                   # $t6 = $t3 + end. inicial da matriz identidade => I[i][k]
-        lwc1 $f0, 0($t6)                                    # Carrega I[i][k] em $f0
+        add $t6, $t5, $a2                                       # $t6 = $t3 + end. inicial da matriz identidade => I[i][k]
+        lwc1 $f0, 0($t6)                                        # Carrega I[i][k] em $f0
 
-        add $t8, $t7, $a2                                   # $t8 = $t7 + end. inicial da matriz => I[j][k]
-        lwc1 $f1, 0($t8)                                    # Carrega I[j][k] em $f1
+        add $t8, $t7, $a2                                       # $t8 = $t7 + end. inicial da matriz => I[j][k]
+        lwc1 $f1, 0($t8)                                        # Carrega I[j][k] em $f1
 
-        swc1 $f1, 0($t6)                                    # Coloca em I[i][k] o valor de I[j][k]
-        swc1 $f0, 0($t8)                                    # Coloca em I[j][k] o valor de I[i][k]
+        swc1 $f1, 0($t6)                                        # Coloca em I[i][k] o valor de I[j][k]
+        swc1 $f0, 0($t8)                                        # Coloca em I[j][k] o valor de I[i][k]
 
         
-        addi $t1, $t1, 1                                    # Incrementa k++
-        j for_k_swap_rows                                   # Retorna para a próxima iteração do loop
+        addi $t1, $t1, 1                                        # Incrementa k++
+        j for_k_swap_rows                                       # Retorna para a próxima iteração do loop
     end_for_k_swap_rows:
 
     lw $ra, 60($sp)
