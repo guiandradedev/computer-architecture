@@ -3,6 +3,7 @@
     msg_num: .asciiz "Digite um numero para a matriz A["
     msg_num2: .asciiz "]["
     msg_num3: .asciiz "]: "
+    espaco: .asciiz " "
     N_invalido_msg: .asciiz "Erro: N deve ser maior que 0 \n"
     gauss_valido_msg: .asciiz "Matriz inversa calculada: \n"
     gauss_invalido_msg: .asciiz "Erro: Não e possivel calcular a matriz inversa dessa matriz. \n"
@@ -336,7 +337,8 @@ create_identity:
 
 #----------------------------------------- Gauss Jordan
 gauss_jordan:
-    addi $sp, $sp, -60
+    addi $sp, $sp, -64
+    sw $ra, 60($sp)
     sw $s0, 56($sp)
     sw $a0, 52($sp)
     sw $a1, 48($sp)
@@ -380,8 +382,10 @@ gauss_jordan:
     or $t0, $zero, $zero                                        # Zera o contador (int i=0)
     li.s   $f0, 0.0                                             # Define que $f0 = 0.0
 
+    #ori $a0, $zero, 1                                    # Defino valor maximo no loop
+
     for_i_gauss_jordan:
-        slt $t2, $t0, $s0                                       # Verifica se $t0 < $s0, ou seja, se i < N
+        slt $t2, $t0, $a0                                       # Verifica se $t0 < $s0, ou seja, se i < N
         beq $t2, $zero, end_for_i_gauss_jordan_matrix           # Se i >= N sai do loop
 
         or $t1, $zero, $zero                                    # Zera o contador (int j=0)
@@ -416,7 +420,7 @@ gauss_jordan:
             lwc1 $f2, 0($t5)                                    # $f2 = M[j][i]   
 
             c.eq.s $f0, $f2                                     # Compara se M[j][i] != 0
-            bc1f continue_swap_search
+            bc1t continue_swap_search
 
             # Achou uma linha para swap
             # Função swap requer:
@@ -427,10 +431,19 @@ gauss_jordan:
             # $t0 = linha j - $t1
             move $a3, $t0                                       # Seta a linha i em $a3
             move $t0, $t1                                       # Seta a linha j em $t0
-            #jal swap_rows
+            jal swap_rows
             move $t0, $a3                                       # Restaura o valor de i em $t0
 
             ori $t4, $zero, 1                                    # Seta a flag found para 1
+
+            # Calculo do endereço de M[i][i]
+            mul $t2, $t0, $s0                                       # $t2 = i * N, offset de acesso a matriz [i][x]
+            move $t3, $t2                                           # Coloca em $t3 o offset de [i] para evitar contas redundantes
+            add $t3, $t3, $t0                                       # $t3 += $t0, ou seja, $t3 (aka i*N) += i
+            sll $t3, $t3, 2                                         # $t3 = ((i * N) + i) * 4, endereço [i][j] sem o endereço base da matriz
+            add $t3, $t3, $a1                                       # $t3 += end. inicial da matriz
+
+            lwc1 $f1, 0($t3)                                        # Carrega na memória M[i][i]
 
             continue_swap_search:
             addi $t1, $t1, 1                                    # Incrementa j++
@@ -446,6 +459,7 @@ gauss_jordan:
 
         #------------- Normalização da matriz com base no pivô (diagonal principal)
         valid_matrix:
+        or $t1, $zero, $zero                                    # Zera o contador j
         for_j_normalize_matrix:
             slt $t4, $t1, $s0                                   # $t4 = $t1 < $s0, ou seja $t4 = j < N
             beq $t4, $zero, end_for_j_normalize_matrix          # Se j >= N finaliza o loop
@@ -462,7 +476,7 @@ gauss_jordan:
             # Normalizando a matriz identidade
             add $t3, $t4, $a2                                   # $t3 += end. inicial da matriz identidade
             lwc1 $f2, 0($t3)                                    # $f2 = I[i][j]
-            div.s $f2, $f2, $f1                                 # $f2 /= $f1 => M[i][j] /= M[i][i]
+            div.s $f2, $f2, $f1                                 # $f2 /= $f1 => I[i][j] /= M[i][i]
             swc1 $f2, 0($t3)                                    # Coloca na memória o resultado da divisão guardado em $f2
             
             addi $t1, $t1, 1                                    # Incrementa j++
@@ -543,8 +557,9 @@ gauss_jordan:
     end_for_i_gauss_jordan_matrix:
 
     ori $v0, $zero, 1
-
+    
     end_gauss:
+    lw $ra, 60($sp)
     lw $s0, 56($sp)
     lw $a0, 52($sp)
     lw $a1, 48($sp)
@@ -562,8 +577,9 @@ gauss_jordan:
     lwc1 $f0, 8($sp)
     lwc1 $f1, 4($sp)
     lwc1 $f2, 0($sp)
-    addi $sp, $sp, 60
+    addi $sp, $sp, 64
     jr $ra
+
 # ------------------- SWAP 
 swap_rows:
     # Parâmetros:
@@ -578,6 +594,7 @@ swap_rows:
     sw $a1, 52($sp)
     sw $a2, 48($sp)
     sw $a3, 44($sp)
+
     sw $t0, 40($sp)
     sw $t1, 36($sp)
     sw $t2, 32($sp)
@@ -587,6 +604,11 @@ swap_rows:
     sw $t6, 16($sp)
     sw $t7, 12($sp)
     sw $t8, 8($sp)
+
+    #li $v0, 4                 # Chamada para print string
+    #la $a0, msg               # Carrega o endereço da string msg
+    #syscall
+    
     swc1 $f0, 4($sp)
     swc1 $f1, 0($sp)
 
@@ -603,13 +625,13 @@ swap_rows:
         beq $t2, $zero, end_for_k_swap_rows                 # Se k >= N finaliza o loop
 
         # Swap na matriz M
-        add $t5, $t2, $t1                                   # $t5 = $t2 + $t1 => $t5 = (i*N) + k
+        add $t5, $t3, $t1                                   # $t5 = $t3 + $t1 => $t5 = (i*N) + k
         sll $t5, $t5, 2                                     # $t5 = ((i * N) + k) * 4 calcula o offset [i][k]
         add $t6, $t5, $a1                                   # $t6 = $t3 + end. inicial da matriz => M[i][k]
-        lwc1 $f0, 0($t6)                                    # Carrega M[i][k] em $f0
+        lwc1 $f0, 0($t6)                                    # Carrega M[i][k] em $f0, variavel temporaria
 
-        add $t7, $t2, $t1                                   # $t7 = $t2 + $t1 => $t7 = (i*N) + k
-        sll $t7, $t7, 2                                     # $t7 = ((i * N) + k) * 4 calcula o offset [i][k]
+        add $t7, $t4, $t1                                   # $t7 = $t4 + $t1 => $t7 = (j*N) + k
+        sll $t7, $t7, 2                                     # $t7 = ((i * N) + k) * 4 calcula o offset [j][k]
         add $t8, $t7, $a1                                   # $t8 = $t7 + end. inicial da matriz => M[j][k]
         lwc1 $f1, 0($t8)                                    # Carrega M[j][k] em $f1
 
@@ -631,21 +653,21 @@ swap_rows:
         j for_k_swap_rows                                   # Retorna para a próxima iteração do loop
     end_for_k_swap_rows:
 
-    sw $ra, 60($sp)
-    sw $a0, 56($sp)
-    sw $a1, 52($sp)
-    sw $a2, 48($sp)
-    sw $a3, 44($sp)
-    sw $t0, 40($sp)
-    sw $t1, 36($sp)
-    sw $t2, 32($sp)
-    sw $t3, 28($sp)
-    sw $t4, 24($sp)
-    sw $t5, 20($sp)
-    sw $t6, 16($sp)
-    sw $t7, 12($sp)
-    sw $t8, 8($sp)
-    swc1 $f0, 4($sp)
-    swc1 $f1, 0($sp)
+    lw $ra, 60($sp)
+    lw $a0, 56($sp)
+    lw $a1, 52($sp)
+    lw $a2, 48($sp)
+    lw $a3, 44($sp)
+    lw $t0, 40($sp)
+    lw $t1, 36($sp)
+    lw $t2, 32($sp)
+    lw $t3, 28($sp)
+    lw $t4, 24($sp)
+    lw $t5, 20($sp)
+    lw $t6, 16($sp)
+    lw $t7, 12($sp)
+    lw $t8, 8($sp)
+    lwc1 $f0, 4($sp)
+    lwc1 $f1, 0($sp)
     addi $sp, $sp, 64
     jr $ra

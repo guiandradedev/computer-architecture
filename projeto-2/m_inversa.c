@@ -47,6 +47,8 @@ int gauss_jordan(double A[N][N], double I[N][N]) {
             }
         }
 
+        temp = A[i][i];
+
         // Normaliza as matrizes
         for (j = 0; j < N; j++) {
             A[i][j] /= temp;
@@ -77,8 +79,8 @@ int main() {
     //     {5, 3, -1, 2, 0, 6}
     // };
     double A[N][N] = {
-        {1,2,3},
-        {4,5,6},
+        {0,2,3},
+        {4,0,6},
         {7,8,9}
     };
 
