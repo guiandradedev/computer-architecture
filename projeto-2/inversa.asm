@@ -369,8 +369,6 @@ gauss_jordan:
     swc1 $f1, 4($sp)
     swc1 $f2, 0($sp)
 
-    # Cria a identidade aqui!
-
     # Declarações iniciais
     move $s0, $a0                                               # $s0 = N
     or $t0, $zero, $zero                                        # Zera o contador (int i=0)
